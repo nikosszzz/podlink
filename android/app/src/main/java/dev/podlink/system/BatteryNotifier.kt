@@ -115,8 +115,18 @@ class BatteryNotifier(context: Context) {
         val signature = "${style.name}|$title|$modelResKey|$smallIcon|$summaryText|${modeText.orEmpty()}|$chipText|$promotedAllowed"
         if (signature == lastSignature) return
 
-        val notification = when (style) {
-            NotificationStyle.DEVICE_CARD -> buildDeviceCardNotification(
+        val notification = if (style == NotificationStyle.LIVE_CHIP && Build.VERSION.SDK_INT >= 36) {
+            buildLiveChipNotification(
+                state = state,
+                title = title,
+                summaryText = summaryText,
+                modeText = modeText,
+                smallIcon = smallIcon,
+                chipText = chipText,
+                includeCase = includeCase,
+            )
+        } else {
+            buildDeviceCardNotification(
                 state = state,
                 title = title,
                 summaryText = summaryText,
@@ -124,26 +134,6 @@ class BatteryNotifier(context: Context) {
                 smallIcon = smallIcon,
                 includeCase = includeCase,
             )
-            NotificationStyle.LIVE_CHIP -> if (Build.VERSION.SDK_INT >= 36) {
-                buildLiveChipNotification(
-                    state = state,
-                    title = title,
-                    summaryText = summaryText,
-                    modeText = modeText,
-                    smallIcon = smallIcon,
-                    chipText = chipText,
-                    includeCase = includeCase,
-                )
-            } else {
-                buildDeviceCardNotification(
-                    state = state,
-                    title = title,
-                    summaryText = summaryText,
-                    modeText = modeText,
-                    smallIcon = smallIcon,
-                    includeCase = includeCase,
-                )
-            }
         }
 
         latestNotification = notification
