@@ -41,6 +41,7 @@ class PodSessionService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        queuedStart.set(false)
         val app = application as? PodLinkApplication
         val notification = app?.notifier?.currentOrFallbackNotification()
         if (notification != null) {
@@ -69,24 +70,28 @@ class PodSessionService : Service() {
 
     override fun onDestroy() {
         running.set(false)
+        queuedStart.set(false)
         super.onDestroy()
     }
 
     companion object {
         private val running = AtomicBoolean(false)
+        private val queuedStart = AtomicBoolean(false)
 
         fun ensureStarted(context: Context) {
-            if (running.get()) return
+            if (running.get() || !queuedStart.compareAndSet(false, true)) return
             runCatching {
                 ContextCompat.startForegroundService(
                     context.applicationContext,
                     Intent(context.applicationContext, PodSessionService::class.java),
                 )
-            }
+            }.onFailure { queuedStart.set(false) }
         }
 
         fun stop(context: Context) {
-            if (!running.getAndSet(false)) return
+            val wasActive = running.getAndSet(false)
+            val wasQueued = queuedStart.getAndSet(false)
+            if (!wasActive && !wasQueued) return
             runCatching {
                 context.applicationContext.stopService(
                     Intent(context.applicationContext, PodSessionService::class.java),

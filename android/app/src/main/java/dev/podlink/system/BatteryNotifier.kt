@@ -170,10 +170,8 @@ class BatteryNotifier(context: Context) {
     fun cancel() {
         latestNotification = null
         PodSessionService.stop(appContext)
-        if (lastSignature != null) {
-            runCatching { manager?.cancel(NOTIFICATION_ID) }
-            lastSignature = null
-        }
+        lastSignature = null
+        runCatching { manager?.cancel(NOTIFICATION_ID) }
     }
 
     fun currentOrFallbackNotification(): Notification =
