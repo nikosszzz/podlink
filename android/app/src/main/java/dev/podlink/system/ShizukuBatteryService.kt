@@ -12,8 +12,12 @@ import org.lsposed.hiddenapibypass.HiddenApiBypass
 import kotlin.system.exitProcess
 
 class ShizukuBatteryService() : IShizukuBatteryBridge.Stub() {
+    private var serviceContext: Context? = null
+
     @Suppress("unused")
-    constructor(@Suppress("UNUSED_PARAMETER") context: Context) : this()
+    constructor(context: Context) : this() {
+        serviceContext = context.applicationContext ?: context
+    }
 
     @Volatile
     private var exemptionsInitialized = false
@@ -31,8 +35,10 @@ class ShizukuBatteryService() : IShizukuBatteryBridge.Stub() {
         exemptionsInitialized = true
     }
 
+    @SuppressLint("PrivateApi")
     private fun resolveSystemContext(): Context? {
         ensureExemptions()
+        serviceContext?.let { return it }
         return runCatching {
             val threadClass = Class.forName("android.app.ActivityThread")
             val current = threadClass.getMethod("currentActivityThread").invoke(null)
