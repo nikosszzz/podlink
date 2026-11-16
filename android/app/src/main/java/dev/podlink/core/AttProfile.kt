@@ -36,17 +36,20 @@ data class TransparencyTuning(
         val capacity = if (ownVoiceAmplification != null) 104 else 100
         val buf = ByteBuffer.allocate(capacity).order(ByteOrder.LITTLE_ENDIAN)
         buf.putFloat(if (enabled) 1f else 0f)
-        for (i in 0 until 8) buf.putFloat(leftEq.getOrElse(i) { 0f })
-        buf.putFloat(leftAmplification)
-        buf.putFloat(leftTone)
-        buf.putFloat(if (leftConversationBoost) 1f else 0f)
-        buf.putFloat(leftAmbientNoiseReduction)
-        for (i in 0 until 8) buf.putFloat(rightEq.getOrElse(i) { 0f })
-        buf.putFloat(rightAmplification)
-        buf.putFloat(rightTone)
-        buf.putFloat(if (rightConversationBoost) 1f else 0f)
-        buf.putFloat(rightAmbientNoiseReduction)
-        if (ownVoiceAmplification != null) buf.putFloat(ownVoiceAmplification)
+        writeChannels(
+            buf = buf,
+            leftEq = leftEq,
+            leftAmp = leftAmplification,
+            leftTone = leftTone,
+            leftBoost = leftConversationBoost,
+            leftAnr = leftAmbientNoiseReduction,
+            rightEq = rightEq,
+            rightAmp = rightAmplification,
+            rightTone = rightTone,
+            rightBoost = rightConversationBoost,
+            rightAnr = rightAmbientNoiseReduction,
+            ownVoice = ownVoiceAmplification,
+        )
         return buf.array()
     }
 
@@ -85,32 +88,22 @@ data class TransparencyTuning(
             if (data.size < 100) return null
             val b = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
             val enabled = b.float > 0.5f
-            val leftEq = FloatArray(8) { b.float }
-            val leftAmp = b.float
-            val leftTone = b.float
-            val leftBoost = b.float > 0.5f
-            val leftAnr = b.float
-            val rightEq = FloatArray(8) { b.float }
-            val rightAmp = b.float
-            val rightTone = b.float
-            val rightBoost = b.float > 0.5f
-            val rightAnr = b.float
-            val ownVoice = if (b.remaining() >= 4) b.float else null
+            val ch = readChannels(b, readOptionalOwnVoice = true)
             return TransparencyTuning(
                 enabled = enabled,
-                leftEq = leftEq,
-                rightEq = rightEq,
-                leftAmplification = leftAmp,
-                rightAmplification = rightAmp,
-                leftTone = leftTone,
-                rightTone = rightTone,
-                leftConversationBoost = leftBoost,
-                rightConversationBoost = rightBoost,
-                leftAmbientNoiseReduction = leftAnr,
-                rightAmbientNoiseReduction = rightAnr,
-                netAmplification = ((leftAmp + rightAmp) / 2f).coerceIn(-1f, 1f),
-                balance = (rightAmp - leftAmp).coerceIn(-1f, 1f),
-                ownVoiceAmplification = ownVoice,
+                leftEq = ch.leftEq,
+                rightEq = ch.rightEq,
+                leftAmplification = ch.leftAmp,
+                rightAmplification = ch.rightAmp,
+                leftTone = ch.leftTone,
+                rightTone = ch.rightTone,
+                leftConversationBoost = ch.leftBoost,
+                rightConversationBoost = ch.rightBoost,
+                leftAmbientNoiseReduction = ch.leftAnr,
+                rightAmbientNoiseReduction = ch.rightAnr,
+                netAmplification = ch.netAmplification,
+                balance = ch.balance,
+                ownVoiceAmplification = ch.ownVoice,
             )
         }
     }
@@ -138,17 +131,21 @@ data class HearingAidTuning(
         val out = base.copyOf()
         val buf = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN)
         buf.put(2, 0x64)
-        for (i in 0 until 8) buf.putFloat(4 + i * 4, leftEq.getOrElse(i) { 0f })
-        buf.putFloat(36, leftAmplification)
-        buf.putFloat(40, leftTone)
-        buf.putFloat(44, if (leftConversationBoost) 1f else 0f)
-        buf.putFloat(48, leftAmbientNoiseReduction)
-        for (i in 0 until 8) buf.putFloat(52 + i * 4, rightEq.getOrElse(i) { 0f })
-        buf.putFloat(84, rightAmplification)
-        buf.putFloat(88, rightTone)
-        buf.putFloat(92, if (rightConversationBoost) 1f else 0f)
-        buf.putFloat(96, rightAmbientNoiseReduction)
-        buf.putFloat(100, ownVoiceAmplification)
+        buf.position(4)
+        writeChannels(
+            buf = buf,
+            leftEq = leftEq,
+            leftAmp = leftAmplification,
+            leftTone = leftTone,
+            leftBoost = leftConversationBoost,
+            leftAnr = leftAmbientNoiseReduction,
+            rightEq = rightEq,
+            rightAmp = rightAmplification,
+            rightTone = rightTone,
+            rightBoost = rightConversationBoost,
+            rightAnr = rightAmbientNoiseReduction,
+            ownVoice = ownVoiceAmplification,
+        )
         return out
     }
 
@@ -186,36 +183,95 @@ data class HearingAidTuning(
         fun parse(data: ByteArray): HearingAidTuning? {
             if (data.size < 104) return null
             val b = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN)
-            b.get()
-            b.get()
-            b.getShort()
-            val leftEq = FloatArray(8) { b.float }
-            val leftAmp = b.float
-            val leftTone = b.float
-            val leftBoost = b.float > 0.5f
-            val leftAnr = b.float
-            val rightEq = FloatArray(8) { b.float }
-            val rightAmp = b.float
-            val rightTone = b.float
-            val rightBoost = b.float > 0.5f
-            val rightAnr = b.float
-            val ownVoice = b.float
+            b.position(4)
+            val ch = readChannels(b, readOptionalOwnVoice = false)
             return HearingAidTuning(
-                leftEq = leftEq,
-                rightEq = rightEq,
-                leftAmplification = leftAmp,
-                rightAmplification = rightAmp,
-                leftTone = leftTone,
-                rightTone = rightTone,
-                leftConversationBoost = leftBoost,
-                rightConversationBoost = rightBoost,
-                leftAmbientNoiseReduction = leftAnr,
-                rightAmbientNoiseReduction = rightAnr,
-                netAmplification = ((leftAmp + rightAmp) / 2f).coerceIn(-1f, 1f),
-                balance = (rightAmp - leftAmp).coerceIn(-1f, 1f),
-                ownVoiceAmplification = ownVoice,
+                leftEq = ch.leftEq,
+                rightEq = ch.rightEq,
+                leftAmplification = ch.leftAmp,
+                rightAmplification = ch.rightAmp,
+                leftTone = ch.leftTone,
+                rightTone = ch.rightTone,
+                leftConversationBoost = ch.leftBoost,
+                rightConversationBoost = ch.rightBoost,
+                leftAmbientNoiseReduction = ch.leftAnr,
+                rightAmbientNoiseReduction = ch.rightAnr,
+                netAmplification = ch.netAmplification,
+                balance = ch.balance,
+                ownVoiceAmplification = ch.ownVoice ?: 0f,
                 rawBytes = data.copyOf(),
             )
         }
     }
+}
+
+private class AttChannels(
+    val leftEq: FloatArray,
+    val leftAmp: Float,
+    val leftTone: Float,
+    val leftBoost: Boolean,
+    val leftAnr: Float,
+    val rightEq: FloatArray,
+    val rightAmp: Float,
+    val rightTone: Float,
+    val rightBoost: Boolean,
+    val rightAnr: Float,
+    val ownVoice: Float?,
+) {
+    val netAmplification: Float get() = ((leftAmp + rightAmp) / 2f).coerceIn(-1f, 1f)
+    val balance: Float get() = (rightAmp - leftAmp).coerceIn(-1f, 1f)
+}
+
+private fun readChannels(b: ByteBuffer, readOptionalOwnVoice: Boolean): AttChannels {
+    val leftEq = FloatArray(8) { b.float }
+    val leftAmp = b.float
+    val leftTone = b.float
+    val leftBoost = b.float > 0.5f
+    val leftAnr = b.float
+    val rightEq = FloatArray(8) { b.float }
+    val rightAmp = b.float
+    val rightTone = b.float
+    val rightBoost = b.float > 0.5f
+    val rightAnr = b.float
+    val ownVoice = if (!readOptionalOwnVoice || b.remaining() >= 4) b.float else null
+    return AttChannels(
+        leftEq = leftEq,
+        leftAmp = leftAmp,
+        leftTone = leftTone,
+        leftBoost = leftBoost,
+        leftAnr = leftAnr,
+        rightEq = rightEq,
+        rightAmp = rightAmp,
+        rightTone = rightTone,
+        rightBoost = rightBoost,
+        rightAnr = rightAnr,
+        ownVoice = ownVoice,
+    )
+}
+
+private fun writeChannels(
+    buf: ByteBuffer,
+    leftEq: FloatArray,
+    leftAmp: Float,
+    leftTone: Float,
+    leftBoost: Boolean,
+    leftAnr: Float,
+    rightEq: FloatArray,
+    rightAmp: Float,
+    rightTone: Float,
+    rightBoost: Boolean,
+    rightAnr: Float,
+    ownVoice: Float?,
+) {
+    for (i in 0 until 8) buf.putFloat(leftEq.getOrElse(i) { 0f })
+    buf.putFloat(leftAmp)
+    buf.putFloat(leftTone)
+    buf.putFloat(if (leftBoost) 1f else 0f)
+    buf.putFloat(leftAnr)
+    for (i in 0 until 8) buf.putFloat(rightEq.getOrElse(i) { 0f })
+    buf.putFloat(rightAmp)
+    buf.putFloat(rightTone)
+    buf.putFloat(if (rightBoost) 1f else 0f)
+    buf.putFloat(rightAnr)
+    if (ownVoice != null) buf.putFloat(ownVoice)
 }
