@@ -49,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -251,6 +252,21 @@ private fun secondaryInk(enabled: Boolean) =
     if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else PodThemeTokens.secondaryDisabledInk
 
 @Composable
+private fun LeadingRowIcon(
+    icon: ImageVector?,
+    tint: Color,
+) {
+    if (icon != null) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
 fun SegmentedActionRow(
     index: Int,
     count: Int,
@@ -279,14 +295,10 @@ fun SegmentedActionRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            if (leadingIcon != null) {
-                Icon(
-                    imageVector = leadingIcon,
-                    contentDescription = null,
-                    tint = if (enabled) MaterialTheme.colorScheme.primary else secondaryInk(false),
-                    modifier = Modifier.size(22.dp),
-                )
-            }
+            LeadingRowIcon(
+                icon = leadingIcon,
+                tint = if (enabled) MaterialTheme.colorScheme.primary else secondaryInk(false),
+            )
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -352,14 +364,10 @@ fun SegmentedSwitchRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            if (leadingIcon != null) {
-                Icon(
-                    imageVector = leadingIcon,
-                    contentDescription = null,
-                    tint = if (enabled) MaterialTheme.colorScheme.primary else secondaryInk(false),
-                    modifier = Modifier.size(22.dp),
-                )
-            }
+            LeadingRowIcon(
+                icon = leadingIcon,
+                tint = if (enabled) MaterialTheme.colorScheme.primary else secondaryInk(false),
+            )
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -623,14 +631,10 @@ fun SegmentedKeyValueRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                if (leadingIcon != null) {
-                    Icon(
-                        imageVector = leadingIcon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+                LeadingRowIcon(
+                    icon = leadingIcon,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -656,14 +660,10 @@ fun SegmentedKeyValueRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                if (leadingIcon != null) {
-                    Icon(
-                        imageVector = leadingIcon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+                LeadingRowIcon(
+                    icon = leadingIcon,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
@@ -702,9 +702,3 @@ fun SegmentedKeyValueRow(
         )
     }
 }
-
-@Immutable
-data class BannerMessage(
-    val text: String,
-    val isError: Boolean = false,
-)
