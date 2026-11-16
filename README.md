@@ -21,7 +21,7 @@
 - Transparency Mode tuning (amplification, balance, tone, ambient noise reduction, conversation boost, own-voice boost) plus Hearing Protection & Hearing Aid controls over BLE ATT
 - 3-band Custom Equalizer + Headphone Accommodations
 - Head Gestures & real-time head tracking preview
-- MInimal background battery drain using Android's `CompanionDeviceService` - wakes up only when your AirPods connect and goes back to sleep when they disconnect
+- Minimal background battery drain using Android's `CompanionDeviceService` - wakes up only when your AirPods connect and goes back to sleep when they disconnect
 
 ## ❓ How to run
 
