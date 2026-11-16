@@ -141,7 +141,12 @@ data class WearSnapshot(
     val secondaryInEar: Boolean get() = secondary == WearState.IN_EAR
     val inEarCount: Int get() = (if (primaryInEar) 1 else 0) + (if (secondaryInEar) 1 else 0)
     val anyInEar: Boolean get() = primaryInEar || secondaryInEar
+    val anyOutOfCase: Boolean
+        get() = primary.isOutOfCase || secondary.isOutOfCase
 }
+
+private val WearState.isOutOfCase: Boolean
+    get() = this == WearState.IN_EAR || this == WearState.OUT_OF_EAR
 
 @Immutable
 data class DeviceMetadata(
