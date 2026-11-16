@@ -154,7 +154,7 @@
     <string name="remake_airpods_uuid_badge">Apple Audio</string>
 
     <string name="remake_status_connected">Connected</string>
-    <string name="remake_status_connecting">Linking AACP…</string>
+    <string name="remake_status_connecting">Linking AACP&#8230;</string>
     <string name="remake_status_dormant">Standby · Zero idle drain</string>
     <string name="remake_status_error">Connection issue</string>
     <string name="remake_retry_connect">Reconnect</string>
@@ -166,7 +166,7 @@
     <string name="remake_cancel">Cancel</string>
 
     <string name="remake_charging">Charging</string>
-    <string name="remake_unavailable">—</string>
+    <string name="remake_unavailable">-</string>
     <string name="remake_headphone">Headphones</string>
 
     <string name="remake_in_ear">In ear</string>
