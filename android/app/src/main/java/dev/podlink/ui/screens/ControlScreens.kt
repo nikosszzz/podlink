@@ -36,6 +36,7 @@ import dev.podlink.core.PodUiState
 import dev.podlink.core.StemAction
 import dev.podlink.core.StemPress
 import dev.podlink.core.StemSide
+import dev.podlink.core.labelRes
 import dev.podlink.ui.components.ExpressiveLazyScaffold
 import dev.podlink.ui.components.SegmentedActionRow
 import dev.podlink.ui.components.SegmentedCardGroup
@@ -47,15 +48,14 @@ import dev.podlink.ui.theme.PodThemeTokens
 
 private data class CycleModeInfo(
     val mode: ListeningMode,
-    @param:StringRes val titleRes: Int,
     @param:StringRes val descRes: Int,
 )
 
 private val CycleModes = listOf(
-    CycleModeInfo(ListeningMode.OFF, R.string.off, R.string.listening_mode_off_description),
-    CycleModeInfo(ListeningMode.TRANSPARENCY, R.string.transparency, R.string.listening_mode_transparency_description),
-    CycleModeInfo(ListeningMode.ADAPTIVE, R.string.adaptive, R.string.listening_mode_adaptive_description),
-    CycleModeInfo(ListeningMode.NOISE_CANCELLATION, R.string.noise_cancellation, R.string.listening_mode_noise_cancellation_description),
+    CycleModeInfo(ListeningMode.OFF, R.string.listening_mode_off_description),
+    CycleModeInfo(ListeningMode.TRANSPARENCY, R.string.listening_mode_transparency_description),
+    CycleModeInfo(ListeningMode.ADAPTIVE, R.string.listening_mode_adaptive_description),
+    CycleModeInfo(ListeningMode.NOISE_CANCELLATION, R.string.listening_mode_noise_cancellation_description),
 )
 
 @StringRes
@@ -113,7 +113,7 @@ fun StemControlsScreen(
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             Text(
-                                text = stringResource(info.titleRes),
+                                text = stringResource(info.mode.labelRes),
                                 style = MaterialTheme.typography.bodyLargeEmphasized,
                             )
                             Text(

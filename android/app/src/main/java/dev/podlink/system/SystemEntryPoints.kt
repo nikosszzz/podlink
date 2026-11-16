@@ -29,6 +29,7 @@ import dev.podlink.core.BatteryMetric
 import dev.podlink.core.ListeningMode
 import dev.podlink.core.PodUiState
 import dev.podlink.core.TraceLog
+import dev.podlink.core.labelRes
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -186,12 +187,7 @@ class QuickSettingsTileService : TileService() {
                 label = state.displayName
                 subtitle = compact ?: getString(R.string.remake_status_connected)
             } else {
-                val modeName = when (state.listeningMode) {
-                    ListeningMode.OFF -> getString(R.string.off)
-                    ListeningMode.TRANSPARENCY -> getString(R.string.transparency)
-                    ListeningMode.ADAPTIVE -> getString(R.string.adaptive)
-                    ListeningMode.NOISE_CANCELLATION -> getString(R.string.noise_cancellation)
-                }
+                val modeName = getString(state.listeningMode.labelRes)
                 newState = if (state.listeningMode == ListeningMode.OFF) Tile.STATE_INACTIVE else Tile.STATE_ACTIVE
                 label = state.displayName
                 subtitle = if (compact != null) "$modeName · $compact" else modeName

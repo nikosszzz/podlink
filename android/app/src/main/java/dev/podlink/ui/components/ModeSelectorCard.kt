@@ -3,16 +3,13 @@
 package dev.podlink.ui.components
 
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material3.ButtonGroupDefaults
@@ -37,19 +34,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.podlink.R
 import dev.podlink.core.ListeningMode
+import dev.podlink.core.labelRes
 import dev.podlink.ui.theme.PodThemeTokens
 
 private data class ModeOption(
     val mode: ListeningMode,
-    @param:StringRes val labelRes: Int,
     @param:DrawableRes val iconRes: Int?,
 )
 
 private val AllModeOptions = listOf(
-    ModeOption(ListeningMode.OFF, R.string.off, null),
-    ModeOption(ListeningMode.TRANSPARENCY, R.string.transparency, R.drawable.transparency),
-    ModeOption(ListeningMode.ADAPTIVE, R.string.adaptive, R.drawable.adaptive),
-    ModeOption(ListeningMode.NOISE_CANCELLATION, R.string.noise_cancellation, R.drawable.noise_cancellation),
+    ModeOption(ListeningMode.OFF, null),
+    ModeOption(ListeningMode.TRANSPARENCY, R.drawable.transparency),
+    ModeOption(ListeningMode.ADAPTIVE, R.drawable.adaptive),
+    ModeOption(ListeningMode.NOISE_CANCELLATION, R.drawable.noise_cancellation),
 )
 
 @Composable
@@ -137,7 +134,7 @@ fun ModeSelectorCard(
                                 )
                             }
                             Text(
-                                text = stringResource(opt.labelRes),
+                                text = stringResource(opt.mode.labelRes),
                                 style = MaterialTheme.typography.labelSmallEmphasized,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,

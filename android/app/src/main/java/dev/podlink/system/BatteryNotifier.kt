@@ -16,11 +16,11 @@ import androidx.annotation.RequiresApi
 import dev.podlink.MainActivity
 import dev.podlink.R
 import dev.podlink.core.BatteryMetric
-import dev.podlink.core.ListeningMode
 import dev.podlink.core.NotificationStyle
 import dev.podlink.core.PodBattery
 import dev.podlink.core.PodUiState
 import dev.podlink.core.TraceLog
+import dev.podlink.core.labelRes
 
 class BatteryNotifier(context: Context) {
     private val appContext = context.applicationContext
@@ -97,12 +97,7 @@ class BatteryNotifier(context: Context) {
         }
 
         val modeText = if (state.supportsListeningMode) {
-            when (state.listeningMode) {
-                ListeningMode.OFF -> appContext.getString(R.string.off)
-                ListeningMode.TRANSPARENCY -> appContext.getString(R.string.transparency)
-                ListeningMode.ADAPTIVE -> appContext.getString(R.string.adaptive)
-                ListeningMode.NOISE_CANCELLATION -> appContext.getString(R.string.noise_cancellation)
-            }
+            appContext.getString(state.listeningMode.labelRes)
         } else {
             null
         }

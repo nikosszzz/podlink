@@ -245,6 +245,14 @@ enum class StemAction(@param:StringRes val labelRes: Int) {
     }
 }
 
+val ListeningMode.labelRes: Int
+    @StringRes get() = when (this) {
+        ListeningMode.OFF -> R.string.off
+        ListeningMode.TRANSPARENCY -> R.string.transparency
+        ListeningMode.ADAPTIVE -> R.string.adaptive
+        ListeningMode.NOISE_CANCELLATION -> R.string.noise_cancellation
+    }
+
 @Immutable
 data class StemMapping(
     val leftSingle: StemAction = StemAction.PLAY_PAUSE,
