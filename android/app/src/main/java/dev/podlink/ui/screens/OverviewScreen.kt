@@ -64,8 +64,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.podlink.BuildConfig
 import dev.podlink.R
 import dev.podlink.core.CompanionSnapshot
 import dev.podlink.core.ConnectionPhase
@@ -85,6 +87,7 @@ import dev.podlink.ui.components.SegmentedSwitchRow
 import dev.podlink.ui.components.sectionGap
 import dev.podlink.ui.components.sectionHeader
 import dev.podlink.ui.theme.PodThemeTokens
+import dev.podlink.ui.theme.tabular
 
 @Composable
 fun OverviewScreen(
@@ -592,6 +595,22 @@ fun OverviewScreen(
                     )
                 }
             }
+        }
+
+        item(key = "app_footer", contentType = "footer") {
+            val versionName = BuildConfig.VERSION_NAME.removeSuffix("-debug")
+            val releaseType = stringResource(
+                if (BuildConfig.DEBUG) R.string.release_type_debug else R.string.release_type_release,
+            )
+            Text(
+                text = stringResource(R.string.app_version_footer, versionName, releaseType),
+                style = MaterialTheme.typography.labelMedium.tabular,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 4.dp),
+            )
         }
     }
 

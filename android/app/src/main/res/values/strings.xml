@@ -265,4 +265,7 @@
     <string name="remake_shizuku_status_stopped">Shevery installed · start service in Shevery app</string>
     <string name="remake_shizuku_status_missing">Shevery not installed</string>
     <string name="remake_sync_now">Sync</string>
+    <string name="release_type_release">Release</string>
+    <string name="release_type_debug">Debug</string>
+    <string name="app_version_footer">Podlink v%1$s - %2$s</string>
 </resources>
