@@ -6,6 +6,7 @@ import dev.podlink.core.MotionSample
 import dev.podlink.core.MotionUiState
 import java.util.Collections
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -30,8 +31,7 @@ class HeadMotionEngine(
     private val _motion = MutableStateFlow(MotionUiState())
     val motion: StateFlow<MotionUiState> = _motion.asStateFlow()
 
-    private val _detecting = MutableStateFlow(false)
-    val detecting: StateFlow<Boolean> = _detecting.asStateFlow()
+    private val detecting = AtomicBoolean(false)
 
     private val calLock = Any()
     private val calSamples = mutableListOf<Triple<Int, Int, Int>>()
@@ -85,7 +85,7 @@ class HeadMotionEngine(
         }
         if (!ready) return
         _motion.value = MotionUiState(pitch, yaw, sample.verticalAccel, sample.horizontalAccel)
-        if (_detecting.value) {
+        if (detecting.get()) {
             ingestAcceleration(sample.horizontalAccel.toInt(), sample.verticalAccel.toInt())
         }
     }
@@ -99,14 +99,13 @@ class HeadMotionEngine(
     }
 
     fun startGestureTest(keepStreamingAfter: Boolean = true, onResult: (Boolean) -> Unit) {
-        if (_detecting.value) return
-        _detecting.value = true
+        if (!detecting.compareAndSet(false, true)) return
         callback = onResult
         clearGestureBuffers()
         startStream()
 
         detectJob = scope.launch(Dispatchers.Default) {
-            while (isActive && _detecting.value) {
+            while (isActive && detecting.get()) {
                 delay(50)
                 val verdict = evaluateGesture() ?: continue
                 playTone(if (verdict) ToneGenerator.TONE_PROP_BEEP2 else ToneGenerator.TONE_PROP_NACK, 120)
@@ -121,8 +120,7 @@ class HeadMotionEngine(
     }
 
     fun stopGestureTest(keepStreaming: Boolean = false) {
-        if (!_detecting.value) return
-        _detecting.value = false
+        if (!detecting.compareAndSet(true, false)) return
         if (!keepStreaming) stopStream()
         detectJob?.cancel()
         detectJob = null

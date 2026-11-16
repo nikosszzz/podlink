@@ -155,7 +155,6 @@ class DeviceCoordinator(
         stopStream = { stopHeadTracking() },
     )
     val motionState: StateFlow<MotionUiState> = motionEngine.motion
-    val detectingGesture: StateFlow<Boolean> = motionEngine.detecting
 
     private var activeLink: AacpLink? = null
     private var activeAtt: AttLink? = null
