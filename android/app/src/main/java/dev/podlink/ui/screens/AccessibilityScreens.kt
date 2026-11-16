@@ -38,7 +38,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
@@ -322,12 +321,12 @@ fun TransparencyScreen(
                 valueLabel = "${((t.netAmplification + 1f) * 50f).roundToInt()}%",
                 value = t.netAmplification,
                 onValueChange = { amp ->
-                    val halfBal = t.balance / 2f
+                    val (leftAmp, rightAmp) = balancedLevels(amp, t.balance)
                     onUpdateTransparency(
                         t.copy(
                             netAmplification = amp,
-                            leftAmplification = (amp - halfBal).coerceIn(-1f, 1f),
-                            rightAmplification = (amp + halfBal).coerceIn(-1f, 1f),
+                            leftAmplification = leftAmp,
+                            rightAmplification = rightAmp,
                         ),
                     )
                 },
@@ -345,12 +344,12 @@ fun TransparencyScreen(
                 valueLabel = "${(t.balance * 100f).roundToInt()}",
                 value = t.balance,
                 onValueChange = { bal ->
-                    val halfBal = bal / 2f
+                    val (leftAmp, rightAmp) = balancedLevels(t.netAmplification, bal)
                     onUpdateTransparency(
                         t.copy(
                             balance = bal,
-                            leftAmplification = (t.netAmplification - halfBal).coerceIn(-1f, 1f),
-                            rightAmplification = (t.netAmplification + halfBal).coerceIn(-1f, 1f),
+                            leftAmplification = leftAmp,
+                            rightAmplification = rightAmp,
                         ),
                     )
                 },
@@ -507,12 +506,12 @@ fun HearingAidScreen(
                     valueLabel = "${((t.netAmplification + 1f) * 50f).roundToInt()}%",
                     value = t.netAmplification,
                     onValueChange = { amp ->
-                        val hb = t.balance / 2f
+                        val (leftAmp, rightAmp) = balancedLevels(amp, t.balance)
                         onUpdateHearingAid(
                             t.copy(
                                 netAmplification = amp,
-                                leftAmplification = (amp - hb).coerceIn(-1f, 1f),
-                                rightAmplification = (amp + hb).coerceIn(-1f, 1f),
+                                leftAmplification = leftAmp,
+                                rightAmplification = rightAmp,
                             ),
                         )
                     },
@@ -527,12 +526,12 @@ fun HearingAidScreen(
                     valueLabel = "${(t.balance * 100f).roundToInt()}",
                     value = t.balance,
                     onValueChange = { bal ->
-                        val hb = bal / 2f
+                        val (leftAmp, rightAmp) = balancedLevels(t.netAmplification, bal)
                         onUpdateHearingAid(
                             t.copy(
                                 balance = bal,
-                                leftAmplification = (t.netAmplification - hb).coerceIn(-1f, 1f),
-                                rightAmplification = (t.netAmplification + hb).coerceIn(-1f, 1f),
+                                leftAmplification = leftAmp,
+                                rightAmplification = rightAmp,
                             ),
                         )
                     },
@@ -754,4 +753,9 @@ private fun MotionRadar(
             )
         }
     }
+}
+
+private fun balancedLevels(net: Float, balance: Float): Pair<Float, Float> {
+    val half = balance / 2f
+    return (net - half).coerceIn(-1f, 1f) to (net + half).coerceIn(-1f, 1f)
 }
