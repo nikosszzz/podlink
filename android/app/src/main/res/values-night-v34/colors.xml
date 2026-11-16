@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_window_background">@android:color/system_surface_dark</color>
+    <color name="widget_surface">@android:color/system_surface_container_dark</color>
+    <color name="widget_surface_highest">@android:color/system_surface_container_highest_dark</color>
+    <color name="widget_surface_pressed">@android:color/system_surface_container_high_dark</color>
+    <color name="widget_on_surface">@android:color/system_on_surface_dark</color>
+    <color name="widget_primary">@android:color/system_primary_dark</color>
+    <color name="widget_primary_container">@android:color/system_primary_container_dark</color>
+    <color name="notif_circle_surface">@android:color/system_surface_container_highest_dark</color>
+    <color name="notif_primary_text">@android:color/system_on_surface_dark</color>
+    <color name="notif_secondary_text">@android:color/system_on_surface_variant_dark</color>
+    <color name="notif_charging_tint">@android:color/system_primary_dark</color>
+</resources>
