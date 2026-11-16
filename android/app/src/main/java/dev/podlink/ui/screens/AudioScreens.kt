@@ -7,11 +7,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
@@ -21,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -171,56 +168,28 @@ fun EqualizerScreen(
         sectionGap("gap_bands")
         sectionHeader("hdr_bands", R.string.custom)
 
-        item(key = "band_low", contentType = "slider") {
-            SegmentedSliderRow(
-                index = 0,
-                count = 3,
-                title = stringResource(R.string.eq_low),
-                valueLabel = formatEqDb(curve.low),
-                value = curve.low.toFloat(),
-                onValueChange = {
-                    onSetCustomEq(curve.copy(state = EqCurve.CUSTOM, low = it.roundToInt().coerceIn(0, 100)))
-                },
-                valueRange = 0f..100f,
-                enabled = curve.isEnabled,
-                startLabel = "-6 dB",
-                centerLabel = "0 dB",
-                endLabel = "+6 dB",
-            )
-        }
-        item(key = "band_mid", contentType = "slider") {
-            SegmentedSliderRow(
-                index = 1,
-                count = 3,
-                title = stringResource(R.string.eq_mid),
-                valueLabel = formatEqDb(curve.mid),
-                value = curve.mid.toFloat(),
-                onValueChange = {
-                    onSetCustomEq(curve.copy(state = EqCurve.CUSTOM, mid = it.roundToInt().coerceIn(0, 100)))
-                },
-                valueRange = 0f..100f,
-                enabled = curve.isEnabled,
-                startLabel = "-6 dB",
-                centerLabel = "0 dB",
-                endLabel = "+6 dB",
-            )
-        }
-        item(key = "band_high", contentType = "slider") {
-            SegmentedSliderRow(
-                index = 2,
-                count = 3,
-                title = stringResource(R.string.eq_high),
-                valueLabel = formatEqDb(curve.high),
-                value = curve.high.toFloat(),
-                onValueChange = {
-                    onSetCustomEq(curve.copy(state = EqCurve.CUSTOM, high = it.roundToInt().coerceIn(0, 100)))
-                },
-                valueRange = 0f..100f,
-                enabled = curve.isEnabled,
-                startLabel = "-6 dB",
-                centerLabel = "0 dB",
-                endLabel = "+6 dB",
-            )
+        val eqBands = listOf(
+            Triple("band_low", R.string.eq_low, curve.low to { v: Int -> curve.copy(state = EqCurve.CUSTOM, low = v) }),
+            Triple("band_mid", R.string.eq_mid, curve.mid to { v: Int -> curve.copy(state = EqCurve.CUSTOM, mid = v) }),
+            Triple("band_high", R.string.eq_high, curve.high to { v: Int -> curve.copy(state = EqCurve.CUSTOM, high = v) }),
+        )
+        eqBands.forEachIndexed { idx, (key, titleRes, levelPair) ->
+            val (level, updateBand) = levelPair
+            item(key = key, contentType = "slider") {
+                SegmentedSliderRow(
+                    index = idx,
+                    count = eqBands.size,
+                    title = stringResource(titleRes),
+                    valueLabel = formatEqDb(level),
+                    value = level.toFloat(),
+                    onValueChange = { onSetCustomEq(updateBand(it.roundToInt().coerceIn(0, 100))) },
+                    valueRange = 0f..100f,
+                    enabled = curve.isEnabled,
+                    startLabel = "-6 dB",
+                    centerLabel = "0 dB",
+                    endLabel = "+6 dB",
+                )
+            }
         }
 
         sectionGap("gap_accomm")
@@ -281,7 +250,6 @@ fun EqualizerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shapes = ButtonDefaults.shapes(),
             ) {
-                Spacer(modifier = Modifier.width(4.dp))
                 Text(text = stringResource(R.string.reset))
             }
         }
