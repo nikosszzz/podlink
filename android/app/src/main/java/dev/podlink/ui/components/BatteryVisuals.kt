@@ -94,7 +94,9 @@ fun BatteryOverviewCard(
                     )
                 }
             }
-            battery.left?.isAvailable == true && battery.right?.isAvailable != true -> {
+            battery.left?.isAvailable == true && battery.right?.isAvailable != true ||
+                battery.right?.isAvailable == true && battery.left?.isAvailable != true -> {
+                val leftOnly = battery.left?.isAvailable == true
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -103,36 +105,10 @@ fun BatteryOverviewCard(
                     verticalAlignment = Alignment.Top,
                 ) {
                     PodBatterySlot(
-                        label = stringResource(R.string.left),
-                        metric = battery.left,
+                        label = stringResource(if (leftOnly) R.string.left else R.string.right),
+                        metric = if (leftOnly) battery.left else battery.right,
                         wearState = wear.primary,
-                        iconRes = leftRes,
-                        isConnected = isConnected,
-                    )
-                    if (battery.case?.isAvailable == true) {
-                        PodBatterySlot(
-                            label = stringResource(R.string.remake_metric_case),
-                            metric = battery.case,
-                            wearState = null,
-                            iconRes = caseRes,
-                            isConnected = isConnected,
-                        )
-                    }
-                }
-            }
-            battery.right?.isAvailable == true && battery.left?.isAvailable != true -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 18.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    PodBatterySlot(
-                        label = stringResource(R.string.right),
-                        metric = battery.right,
-                        wearState = wear.primary,
-                        iconRes = rightRes,
+                        iconRes = if (leftOnly) leftRes else rightRes,
                         isConnected = isConnected,
                     )
                     if (battery.case?.isAvailable == true) {
