@@ -191,12 +191,55 @@ class CompanionBridge(context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun isAnyAudioConnected(): Boolean {
-        val adapter = btManager?.adapter ?: return false
-        if (!adapter.isEnabled) return false
-        val a2dp = adapter.getProfileConnectionState(BluetoothProfile.A2DP)
-        val hfp = adapter.getProfileConnectionState(BluetoothProfile.HEADSET)
-        return a2dp == BluetoothProfile.STATE_CONNECTED || hfp == BluetoothProfile.STATE_CONNECTED
+    fun queryDeviceAudioStates(mac: String, onResult: (a2dpConnected: Boolean, hfpConnected: Boolean) -> Unit) {
+        val adapter = btManager?.adapter
+        if (adapter == null || !adapter.isEnabled) {
+            onResult(false, false)
+            return
+        }
+        val a2dpUp = adapter.getProfileConnectionState(BluetoothProfile.A2DP) == BluetoothAdapter.STATE_CONNECTED
+        val hfpUp = adapter.getProfileConnectionState(BluetoothProfile.HEADSET) == BluetoothAdapter.STATE_CONNECTED
+        if (!a2dpUp && !hfpUp) {
+            onResult(false, false)
+            return
+        }
+        val target = mac.uppercase(Locale.US)
+        isDeviceConnectedOnProfile(adapter, BluetoothProfile.A2DP, a2dpUp, target) { a2dpHit ->
+            isDeviceConnectedOnProfile(adapter, BluetoothProfile.HEADSET, hfpUp, target) { hfpHit ->
+                onResult(a2dpHit, hfpHit)
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun isDeviceConnectedOnProfile(
+        adapter: BluetoothAdapter,
+        profile: Int,
+        enabled: Boolean,
+        targetMac: String,
+        onResult: (Boolean) -> Unit,
+    ) {
+        if (!enabled) {
+            onResult(false)
+            return
+        }
+        val requested = runCatching {
+            adapter.getProfileProxy(
+                appContext,
+                object : BluetoothProfile.ServiceListener {
+                    override fun onServiceConnected(p: Int, proxy: BluetoothProfile) {
+                        val hit = runCatching {
+                            proxy.connectedDevices.any { it.address.equals(targetMac, ignoreCase = true) }
+                        }.getOrDefault(false)
+                        adapter.closeProfileProxy(p, proxy)
+                        onResult(hit)
+                    }
+                    override fun onServiceDisconnected(p: Int) = Unit
+                },
+                profile,
+            )
+        }.getOrDefault(false)
+        if (!requested) onResult(false)
     }
 
     @SuppressLint("MissingPermission")

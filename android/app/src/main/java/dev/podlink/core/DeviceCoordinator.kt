@@ -2,14 +2,21 @@ package dev.podlink.core
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.companion.AssociationInfo
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import androidx.compose.runtime.Stable
+import androidx.core.content.ContextCompat
 import dev.podlink.bt.AacpLink
 import dev.podlink.bt.AttLink
 import dev.podlink.bt.CompanionBridge
@@ -160,7 +167,38 @@ class DeviceCoordinator(
     private var eqJob: Job? = null
     private var attJob: Job? = null
     private var bleRetryJob: Job? = null
+    private var caseCloseJob: Job? = null
     private var stemSyncPosted = false
+
+    private var btReceiverRegistered = false
+    private var a2dpConnectedForActive = false
+    private var hfpConnectedForActive = false
+    private var sawAnyAudioProfileForActive = false
+    private var sawBothBudsInSession = false
+    private var pendingBatteryOnClose: PodBattery? = null
+    private var pendingWearOnClose: WearSnapshot? = null
+
+    private val btStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java) ?: return
+            val mac = device.address ?: return
+            if (!activeMac.equals(mac, ignoreCase = true)) return
+            when (intent.action) {
+                BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
+                    TraceLog.record(TAG, "ACL_DISCONNECTED for $mac")
+                    onDeviceDisconnected(mac)
+                }
+                BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED -> {
+                    val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, BluetoothProfile.STATE_DISCONNECTED)
+                    handleAudioProfileChanged(mac, isA2dp = true, profileState = state)
+                }
+                BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
+                    val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, BluetoothProfile.STATE_DISCONNECTED)
+                    handleAudioProfileChanged(mac, isA2dp = false, profileState = state)
+                }
+            }
+        }
+    }
 
     init {
         if (hasBtPermission()) {
@@ -253,11 +291,21 @@ class DeviceCoordinator(
 
     fun onBleDisappeared(mac: String) {
         if (!activeMac.equals(mac, ignoreCase = true)) return
-        if (companion.isAnyAudioConnected()) {
-            TraceLog.record(TAG, "BLE disappeared for $mac while audio still connected -> keeping session")
+        val snap = _state.value
+        if (snap.earDetectionEnabled && !snap.wear.anyOutOfCase) {
+            TraceLog.record(TAG, "BLE disappeared for $mac with buds in case -> closing session")
+            resetDisconnectedState()
+            companion.disconnectAudioProfiles(mac)
             return
         }
-        onDeviceDisconnected(mac)
+        companion.queryDeviceAudioStates(mac) { a2dpUp, hfpUp ->
+            if (!activeMac.equals(mac, ignoreCase = true)) return@queryDeviceAudioStates
+            if (a2dpUp || hfpUp) {
+                TraceLog.record(TAG, "BLE disappeared for $mac while audio still connected -> keeping session")
+            } else {
+                onDeviceDisconnected(mac)
+            }
+        }
     }
 
     fun refreshNotifications() {
@@ -327,6 +375,15 @@ class DeviceCoordinator(
         L2capChannel.ensureExempted()
         activeMac = mac
         stemSyncPosted = false
+        registerBtStateReceiver()
+        companion.queryDeviceAudioStates(mac) { a2dpUp, hfpUp ->
+            if (!activeMac.equals(mac, ignoreCase = true)) return@queryDeviceAudioStates
+            a2dpConnectedForActive = a2dpConnectedForActive || a2dpUp
+            hfpConnectedForActive = hfpConnectedForActive || hfpUp
+            if (a2dpConnectedForActive || hfpConnectedForActive) {
+                sawAnyAudioProfileForActive = true
+            }
+        }
 
         val btName = runCatching { device.name }.getOrNull().orEmpty()
         updateState {
@@ -744,11 +801,40 @@ class DeviceCoordinator(
             val prev = _state.value
             when (packet) {
                 is AacpPacket.StemEvent -> handleStemEvent(packet)
+                is AacpPacket.BatteryInfo -> {
+                    val nextBattery = PodBattery.from(packet.metrics)
+                    if (nextBattery.activeLayout == PodBattery.Layout.BOTH_BUDS) {
+                        sawBothBudsInSession = true
+                        cancelCaseCloseCheck()
+                    } else if (shouldDeferOnCaseClose(prev, nextBattery, pendingWearOnClose ?: prev.wear)) {
+                        pendingBatteryOnClose = nextBattery
+                        scheduleCaseCloseCheck(sourceMac)
+                        return@launch
+                    }
+                }
                 is AacpPacket.EarDetection -> {
                     val userPrefs = prev.prefs
                     media.onWearChanged(prev.wear, packet.wear, userPrefs.autoPauseResumeOnEarDetection)
                     if (userPrefs.disconnectWhenNotWearing && prev.wear.anyInEar && !packet.wear.anyInEar) {
                         companion.disconnectAudioProfiles(sourceMac)
+                    }
+                    if (packet.wear.anyOutOfCase) {
+                        flushPendingCloseState(packet)
+                        return@launch
+                    }
+                    if (sawBothBudsInSession && prev.earDetectionEnabled &&
+                        (packet.wear.primary == WearState.DISCONNECTED || packet.wear.secondary == WearState.DISCONNECTED)
+                    ) {
+                        pendingWearOnClose = packet.wear
+                        scheduleCaseCloseCheck(sourceMac)
+                        return@launch
+                    }
+                    if (pendingBatteryOnClose == null &&
+                        prev.battery.activeLayout == PodBattery.Layout.BOTH_BUDS &&
+                        packet.wear.primary != WearState.DISCONNECTED &&
+                        packet.wear.secondary != WearState.DISCONNECTED
+                    ) {
+                        cancelCaseCloseCheck()
                     }
                 }
                 is AacpPacket.ConversationAwareness -> {
@@ -822,11 +908,94 @@ class DeviceCoordinator(
         }
     }
 
+    private fun registerBtStateReceiver() {
+        if (btReceiverRegistered) return
+        val filter = IntentFilter().apply {
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
+        }
+        runCatching {
+            ContextCompat.registerReceiver(appContext, btStateReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
+            btReceiverRegistered = true
+        }
+    }
+
+    private fun unregisterBtStateReceiver() {
+        if (!btReceiverRegistered) return
+        btReceiverRegistered = false
+        runCatching { appContext.unregisterReceiver(btStateReceiver) }
+    }
+
+    private fun handleAudioProfileChanged(mac: String, isA2dp: Boolean, profileState: Int) {
+        if (!activeMac.equals(mac, ignoreCase = true)) return
+        val connected = profileState == BluetoothProfile.STATE_CONNECTED
+        if (isA2dp) a2dpConnectedForActive = connected else hfpConnectedForActive = connected
+        if (connected) {
+            sawAnyAudioProfileForActive = true
+            return
+        }
+        if (profileState == BluetoothProfile.STATE_DISCONNECTED &&
+            sawAnyAudioProfileForActive &&
+            !a2dpConnectedForActive &&
+            !hfpConnectedForActive
+        ) {
+            TraceLog.record(TAG, "Audio profiles disconnected for $mac -> closing session")
+            resetDisconnectedState()
+        }
+    }
+
+    private fun shouldDeferOnCaseClose(
+        prev: PodUiState,
+        nextBattery: PodBattery,
+        wear: WearSnapshot,
+    ): Boolean = sawBothBudsInSession &&
+        prev.earDetectionEnabled &&
+        !wear.anyOutOfCase &&
+        nextBattery.activeLayout != PodBattery.Layout.BOTH_BUDS
+
+    private fun scheduleCaseCloseCheck(mac: String) {
+        if (caseCloseJob?.isActive == true) return
+        caseCloseJob = scope.launch {
+            delay(CASE_CLOSE_CONFIRM_MS)
+            if (!activeMac.equals(mac, ignoreCase = true)) return@launch
+            val snap = _state.value
+            if (snap.earDetectionEnabled && !snap.wear.anyOutOfCase) {
+                TraceLog.record(TAG, "Case closed with buds inside ($mac) -> closing session")
+                resetDisconnectedState()
+                companion.disconnectAudioProfiles(mac)
+            } else {
+                flushPendingCloseState()
+            }
+        }
+    }
+
+    private fun flushPendingCloseState(packetToReduce: AacpPacket? = null) {
+        val flushedBattery = pendingBatteryOnClose
+        val flushedWear = pendingWearOnClose
+        cancelCaseCloseCheck()
+        updateState {
+            var next = this
+            if (flushedBattery != null) next = next.copy(battery = flushedBattery)
+            if (flushedWear != null) next = next.copy(wear = flushedWear)
+            if (packetToReduce != null) PodStateReducer.reduce(next, packetToReduce) else next
+        }
+    }
+
+    private fun cancelCaseCloseCheck() {
+        caseCloseJob?.cancel()
+        caseCloseJob = null
+        pendingBatteryOnClose = null
+        pendingWearOnClose = null
+    }
+
     private fun sendPacket(packet: ByteArray): Boolean = activeLink?.send(packet) == true
 
     private fun closeLinks() {
+        unregisterBtStateReceiver()
         bleRetryJob?.cancel()
         bleRetryJob = null
+        cancelCaseCloseCheck()
         sliderJob?.cancel()
         sliderJob = null
         accommJob?.cancel()
@@ -836,6 +1005,10 @@ class DeviceCoordinator(
         attJob?.cancel()
         attJob = null
         activeMac = null
+        a2dpConnectedForActive = false
+        hfpConnectedForActive = false
+        sawAnyAudioProfileForActive = false
+        sawBothBudsInSession = false
         activeLink?.close()
         activeLink = null
         activeAtt?.close()
@@ -924,5 +1097,6 @@ class DeviceCoordinator(
     private companion object {
         const val TAG = "DeviceCoordinator"
         const val SYNC_THROTTLE_MS = 2000L
+        const val CASE_CLOSE_CONFIRM_MS = 650L
     }
 }
