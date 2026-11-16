@@ -31,7 +31,6 @@ class AttLink(
     private val running = AtomicBoolean(true)
     private val available = AtomicBoolean(false)
     private val responseQueues = ConcurrentHashMap<Byte, LinkedBlockingQueue<ByteArray>>()
-    private val cache = ConcurrentHashMap<AttHandle, ByteArray>()
 
     @Volatile private var socket: BluetoothSocket? = null
 
@@ -73,9 +72,6 @@ class AttLink(
         }
     }
 
-    fun getCachedOrRead(handle: AttHandle): ByteArray? =
-        cache[handle]?.takeIf { it.isNotEmpty() } ?: readChar(handle)
-
     fun readChar(handle: AttHandle, timeoutMs: Long = 2000L): ByteArray? {
         val current = socket ?: return null
         if (!available.get()) return null
@@ -87,7 +83,7 @@ class AttLink(
             }
             val resp = waitResp(OP_READ_RSP, timeoutMs) ?: return null
             if (resp.size <= 1) return null
-            resp.copyOfRange(1, resp.size).also { cache[handle] = it }
+            resp.copyOfRange(1, resp.size)
         } catch (_: Throwable) {
             null
         }
@@ -97,10 +93,8 @@ class AttLink(
         writeRaw(handle.code, byteArrayOf(0x01))
     }
 
-    fun writeChar(handle: AttHandle, data: ByteArray, timeoutMs: Long = 2000L): Boolean {
-        cache[handle] = data
-        return writeRaw(handle.code, data, timeoutMs)
-    }
+    fun writeChar(handle: AttHandle, data: ByteArray, timeoutMs: Long = 2000L): Boolean =
+        writeRaw(handle.code, data, timeoutMs)
 
     private fun writeRaw(handle: Byte, data: ByteArray, timeoutMs: Long = 2000L): Boolean {
         val current = socket ?: return false
@@ -133,11 +127,6 @@ class AttLink(
             if (op == OP_NOTIFY && data.size >= 3) {
                 val handle = data[1]
                 val value = if (data.size > 3) data.copyOfRange(3, data.size) else ByteArray(0)
-                when (handle) {
-                    AttHandle.TRANSPARENCY.code -> cache[AttHandle.TRANSPARENCY] = value
-                    AttHandle.LOUD_SOUND_REDUCTION.code -> cache[AttHandle.LOUD_SOUND_REDUCTION] = value
-                    AttHandle.HEARING_AID.code -> cache[AttHandle.HEARING_AID] = value
-                }
                 onNotify(handle, value)
             }
         }
@@ -150,7 +139,6 @@ class AttLink(
     fun close() {
         if (!running.getAndSet(false)) return
         available.set(false)
-        cache.clear()
         closeSocket()
         scope.cancel()
     }
