@@ -47,17 +47,13 @@ class CompanionBridge(context: Context) {
     @SuppressLint("MissingPermission")
     fun listUnassociatedBonded(): List<BondedCandidate> {
         val adapter = btManager?.adapter ?: return emptyList()
-        val linkedMacs = cdm?.myAssociations
-            ?.mapNotNull { it.deviceMacAddress?.toString()?.uppercase(Locale.US) }
-            ?.toSet()
-            .orEmpty()
-        val podUuid = ParcelUuid.fromString(AacpSpec.SERVICE_UUID)
+        val linkedMacs = associatedMacs()
         return runCatching {
             adapter.bondedDevices.orEmpty()
                 .filter { it.address.uppercase(Locale.US) !in linkedMacs }
                 .map { device ->
                     val major = device.bluetoothClass?.majorDeviceClass
-                    val hasUuid = device.uuids?.contains(podUuid) == true
+                    val hasUuid = device.uuids?.contains(POD_UUID) == true
                     val isAudio = hasUuid ||
                         major == BluetoothClass.Device.Major.AUDIO_VIDEO ||
                         major == BluetoothClass.Device.Major.WEARABLE
@@ -252,13 +248,12 @@ class CompanionBridge(context: Context) {
             return onResult(null, "No Bluetooth audio connected (A2DP=$a2dp, HFP=$hfp)")
         }
 
-        val linked = cdm?.myAssociations?.mapNotNull { it.deviceMacAddress?.toString()?.uppercase(Locale.US) }?.toSet().orEmpty()
-        val podUuid = ParcelUuid.fromString(AacpSpec.SERVICE_UUID)
+        val linked = associatedMacs()
         val candidates = runCatching {
             adapter.bondedDevices.orEmpty()
                 .filter {
                     it.address.uppercase(Locale.US) in linked ||
-                        it.uuids?.contains(podUuid) == true ||
+                        it.uuids?.contains(POD_UUID) == true ||
                         it.name?.contains("AirPods", ignoreCase = true) == true
                 }
                 .map { it.address.uppercase(Locale.US) }
@@ -340,8 +335,14 @@ class CompanionBridge(context: Context) {
         return CompanionLinkSummary(id, mac, name)
     }
 
+    private fun associatedMacs(): Set<String> = cdm?.myAssociations
+        ?.mapNotNull { it.deviceMacAddress?.toString()?.uppercase(Locale.US) }
+        ?.toSet()
+        .orEmpty()
+
     private companion object {
         const val TAG = "CompanionBridge"
+        val POD_UUID: ParcelUuid = ParcelUuid.fromString(AacpSpec.SERVICE_UUID)
     }
 }
 
