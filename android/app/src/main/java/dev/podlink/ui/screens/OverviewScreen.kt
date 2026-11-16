@@ -645,26 +645,30 @@ private fun PodsHeroCard(state: PodUiState) {
                 }
             }
 
-            val badgeText = when (state.phase) {
+            val (badgeText, badgeContainer, badgeContent) = when (state.phase) {
                 ConnectionPhase.CONNECTED -> {
                     val m = state.matchedModel?.name ?: state.effectiveModelNumber.ifBlank { "AirPods" }
-                    "$m · ${stringResource(R.string.remake_status_connected)}"
+                    Triple(
+                        "$m · ${stringResource(R.string.remake_status_connected)}",
+                        MaterialTheme.colorScheme.secondaryContainer,
+                        MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
                 }
-                ConnectionPhase.CONNECTING -> stringResource(R.string.remake_status_connecting)
-                ConnectionPhase.ERROR -> stringResource(R.string.remake_status_error)
-                ConnectionPhase.DISCONNECTED -> state.matchedModel?.name ?: stringResource(R.string.remake_status_dormant)
-            }
-            val badgeContainer = when (state.phase) {
-                ConnectionPhase.CONNECTED -> MaterialTheme.colorScheme.secondaryContainer
-                ConnectionPhase.CONNECTING -> MaterialTheme.colorScheme.tertiaryContainer
-                ConnectionPhase.ERROR -> MaterialTheme.colorScheme.errorContainer
-                ConnectionPhase.DISCONNECTED -> PodThemeTokens.cardInsetContainer
-            }
-            val badgeContent = when (state.phase) {
-                ConnectionPhase.CONNECTED -> MaterialTheme.colorScheme.onSecondaryContainer
-                ConnectionPhase.CONNECTING -> MaterialTheme.colorScheme.onTertiaryContainer
-                ConnectionPhase.ERROR -> MaterialTheme.colorScheme.onErrorContainer
-                ConnectionPhase.DISCONNECTED -> MaterialTheme.colorScheme.onSurfaceVariant
+                ConnectionPhase.CONNECTING -> Triple(
+                    stringResource(R.string.remake_status_connecting),
+                    MaterialTheme.colorScheme.tertiaryContainer,
+                    MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+                ConnectionPhase.ERROR -> Triple(
+                    stringResource(R.string.remake_status_error),
+                    MaterialTheme.colorScheme.errorContainer,
+                    MaterialTheme.colorScheme.onErrorContainer,
+                )
+                ConnectionPhase.DISCONNECTED -> Triple(
+                    state.matchedModel?.name ?: stringResource(R.string.remake_status_dormant),
+                    PodThemeTokens.cardInsetContainer,
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             Surface(
