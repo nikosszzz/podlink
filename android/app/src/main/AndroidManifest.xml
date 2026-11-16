@@ -61,7 +61,8 @@
             android:authorities="${applicationId}.shevery"
             android:enabled="true"
             android:exported="true"
-            android:multiprocess="false" />
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <service
             android:name="dev.podlink.bt.PodPresenceService"
