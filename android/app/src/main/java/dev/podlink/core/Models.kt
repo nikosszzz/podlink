@@ -268,9 +268,6 @@ data class StemMapping(
         return actionFor(press, StemSide.LEFT) != d || actionFor(press, StemSide.RIGHT) != d
     }
 
-    fun isCustomEvent(press: StemPress, side: StemSide): Boolean =
-        actionFor(press, side) != StemAction.defaultFor(press)
-
     fun updated(press: StemPress, isLeft: Boolean, action: StemAction): StemMapping = when (press) {
         StemPress.SINGLE_PRESS -> if (isLeft) copy(leftSingle = action) else copy(rightSingle = action)
         StemPress.DOUBLE_PRESS -> if (isLeft) copy(leftDouble = action) else copy(rightDouble = action)
