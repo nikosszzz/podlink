@@ -256,7 +256,7 @@ object WidgetSync {
         ).also { openAppPi = it }
 
         val views = RemoteViews(context.packageName, R.layout.battery_widget).apply {
-            setOnClickPendingIntent(R.id.battery_widget, launchPi)
+            setOnClickPendingIntent(android.R.id.background, launchPi)
             bindPod(R.id.left_battery_widget, R.id.left_battery_progress, R.id.left_charging_icon, state.battery.left ?: state.battery.headphone)
             bindPod(R.id.right_battery_widget, R.id.right_battery_progress, R.id.right_charging_icon, state.battery.right)
             bindPod(R.id.case_battery_widget, R.id.case_battery_progress, R.id.case_charging_icon, state.battery.case)

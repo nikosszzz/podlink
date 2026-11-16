@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background">
-
-    <LinearLayout
-        android:id="@android:id/background"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:baselineAligned="false"
-        android:orientation="horizontal">
+    android:background="@drawable/widget_background"
+    android:baselineAligned="false"
+    android:orientation="horizontal">
 
         <LinearLayout
             android:id="@+id/widget_off_button"
@@ -135,5 +131,4 @@
                 android:textSize="12sp"
                 tools:ignore="NestedWeights" />
         </LinearLayout>
-    </LinearLayout>
-</RelativeLayout>
+</LinearLayout>
