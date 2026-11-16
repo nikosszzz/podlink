@@ -12,6 +12,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
@@ -485,45 +486,49 @@ private fun PodAppRoot(app: PodLinkApplication) {
     }
 
     if (showDevicePicker) {
+        val onChooser: (IntentSender) -> Unit = { sender ->
+            cdmLauncher.launch(IntentSenderRequest.Builder(sender).build())
+        }
+        val onAssociationError: (String) -> Unit = { err ->
+            isAssociating = false
+            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+        }
+        fun beginAssociation(action: () -> Unit) {
+            showDevicePicker = false
+            isAssociating = true
+            action()
+        }
+
         PairedDevicePickerSheet(
             candidates = bondedCandidates,
             isAssociating = isAssociating,
             onDismiss = { showDevicePicker = false },
             onSelectBonded = { candidate ->
-                showDevicePicker = false
-                isAssociating = true
-                coordinator.associateMac(
-                    macAddress = candidate.macAddress,
-                    onChooser = { sender -> cdmLauncher.launch(IntentSenderRequest.Builder(sender).build()) },
-                    onError = { err ->
-                        isAssociating = false
-                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
-                    },
-                )
+                beginAssociation {
+                    coordinator.associateMac(
+                        macAddress = candidate.macAddress,
+                        onChooser = onChooser,
+                        onError = onAssociationError,
+                    )
+                }
             },
             onScanAirPods = {
-                showDevicePicker = false
-                isAssociating = true
-                coordinator.startDiscovery(
-                    showAll = false,
-                    onChooser = { sender -> cdmLauncher.launch(IntentSenderRequest.Builder(sender).build()) },
-                    onError = { err ->
-                        isAssociating = false
-                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
-                    },
-                )
+                beginAssociation {
+                    coordinator.startDiscovery(
+                        showAll = false,
+                        onChooser = onChooser,
+                        onError = onAssociationError,
+                    )
+                }
             },
             onScanAll = {
-                showDevicePicker = false
-                isAssociating = true
-                coordinator.startDiscovery(
-                    showAll = true,
-                    onChooser = { sender -> cdmLauncher.launch(IntentSenderRequest.Builder(sender).build()) },
-                    onError = { err ->
-                        isAssociating = false
-                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
-                    },
-                )
+                beginAssociation {
+                    coordinator.startDiscovery(
+                        showAll = true,
+                        onChooser = onChooser,
+                        onError = onAssociationError,
+                    )
+                }
             },
         )
     }
